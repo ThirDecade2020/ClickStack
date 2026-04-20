@@ -23,50 +23,63 @@ title_msg      db 'ClickStack', 0
 subtitle_msg   db 'Press any key to trace', 0
 triggered_msg  db 'Input detected', 0
 
-hdr_stage      db 'STAGE', 0
+hdr_stage      db 'STG', 0
 hdr_code       db 'CODE', 0
 hdr_hw         db 'HW', 0
 hdr_vis        db 'VIS', 0
-hdr_cycles     db 'CYCLES', 0
+hdr_role       db 'ROLE', 0
+hdr_cycles     db 'CYC', 0
 
-s1_name        db '1 poll', 0
-s1_code        db 'kbc status', 0
-s1_hw          db 'CPU+KBC', 0
+s1_name        db '1poll', 0
+s1_code        db 'kbcst', 0
+s1_hw          db 'CPUKBC', 0
 s1_vis         db 'D', 0
+s1_role        db 'FWSYS', 0
 
-s2_name        db '2 read', 0
-s2_code        db 'scancode', 0
-s2_hw          db 'CPU+KBC', 0
+s2_name        db '2read', 0
+s2_code        db 'scanrd', 0
+s2_hw          db 'CPUKBC', 0
 s2_vis         db 'D', 0
+s2_role        db 'DRVSYS', 0
 
-s3_name        db '3 norm', 0
-s3_code        db 'normalize', 0
-s3_hw          db 'CPU+RAM', 0
+s3_name        db '3norm', 0
+s3_code        db 'normlz', 0
+s3_hw          db 'CPURAM', 0
 s3_vis         db 'D', 0
+s3_role        db 'SYSIN', 0
 
-s4_name        db '4 shell', 0
-s4_code        db 'table hdr', 0
-s4_hw          db 'CPU+RAM', 0
+s4_name        db '4shell', 0
+s4_code        db 'tabhdr', 0
+s4_hw          db 'CPURAM', 0
 s4_vis         db 'D', 0
+s4_role        db 'UIGFX', 0
 
-s5_name        db '5 meta', 0
-s5_code        db 'stage rows', 0
-s5_hw          db 'CPU+RAM', 0
+s5_name        db '5meta', 0
+s5_code        db 'stager', 0
+s5_hw          db 'CPURAM', 0
 s5_vis         db 'D', 0
+s5_role        db 'APPSYS', 0
 
-s6_name        db '6 cycles', 0
-s6_code        db 'hex render', 0
-s6_hw          db 'CPU+RAM', 0
+s6_name        db '6cycle', 0
+s6_code        db 'hexdrw', 0
+s6_hw          db 'CPURAM', 0
 s6_vis         db 'D', 0
+s6_role        db 'PFGFX', 0
 
-s7_name        db '7 total', 0
-s7_code        db 'final row', 0
-s7_hw          db 'CPU+VGA', 0
+s7_name        db '7total', 0
+s7_code        db 'sumrow', 0
+s7_hw          db 'CPUVGA', 0
 s7_vis         db 'P', 0
+s7_role        db 'APPGFX', 0
 
 total_label    db 'TOTAL', 0
+
+legend1        db 'HW CPU/KBC/RAM/VGA', 0
+legend2        db 'VIS D=Direct P=Partial', 0
+legend3        db 'ROLE FW SYS DRV IN UI APP GFX PF', 0
+
 hex_buffer     db '0000000000000000', 0
-norm_buf       db 'MAKE  ', 0
+norm_buf       db 'MAKE', 0
 
 t0_low         dd 0
 t0_high        dd 0
@@ -198,16 +211,12 @@ normalize_input:
     mov byte [norm_buf + 1], 'R'
     mov byte [norm_buf + 2], 'E'
     mov byte [norm_buf + 3], 'A'
-    mov byte [norm_buf + 4], 'K'
-    mov byte [norm_buf + 5], ' '
     ret
 .make_code:
     mov byte [norm_buf + 0], 'M'
     mov byte [norm_buf + 1], 'A'
     mov byte [norm_buf + 2], 'K'
     mov byte [norm_buf + 3], 'E'
-    mov byte [norm_buf + 4], ' '
-    mov byte [norm_buf + 5], ' '
     ret
 
 render_table_shell:
@@ -222,22 +231,27 @@ render_table_shell:
     call print_string
 
     mov esi, hdr_code
-    mov edi, 0xB8000 + (5 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (5 * 160) + (8 * 2)
     mov ah, 0x0B
     call print_string
 
     mov esi, hdr_hw
-    mov edi, 0xB8000 + (5 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (5 * 160) + (16 * 2)
     mov ah, 0x0B
     call print_string
 
     mov esi, hdr_vis
-    mov edi, 0xB8000 + (5 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (5 * 160) + (24 * 2)
+    mov ah, 0x0B
+    call print_string
+
+    mov esi, hdr_role
+    mov edi, 0xB8000 + (5 * 160) + (29 * 2)
     mov ah, 0x0B
     call print_string
 
     mov esi, hdr_cycles
-    mov edi, 0xB8000 + (5 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (5 * 160) + (38 * 2)
     mov ah, 0x0B
     call print_string
     ret
@@ -248,15 +262,19 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s1_code
-    mov edi, 0xB8000 + (7 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (7 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s1_hw
-    mov edi, 0xB8000 + (7 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (7 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s1_vis
-    mov edi, 0xB8000 + (7 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (7 * 160) + (24 * 2)
+    mov ah, 0x07
+    call print_string
+    mov esi, s1_role
+    mov edi, 0xB8000 + (7 * 160) + (29 * 2)
     mov ah, 0x07
     call print_string
 
@@ -265,15 +283,19 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s2_code
-    mov edi, 0xB8000 + (8 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (8 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s2_hw
-    mov edi, 0xB8000 + (8 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (8 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s2_vis
-    mov edi, 0xB8000 + (8 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (8 * 160) + (24 * 2)
+    mov ah, 0x07
+    call print_string
+    mov esi, s2_role
+    mov edi, 0xB8000 + (8 * 160) + (29 * 2)
     mov ah, 0x07
     call print_string
 
@@ -282,15 +304,19 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s3_code
-    mov edi, 0xB8000 + (9 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (9 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s3_hw
-    mov edi, 0xB8000 + (9 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (9 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
-    mov esi, norm_buf
-    mov edi, 0xB8000 + (9 * 160) + (37 * 2)
+    mov esi, s3_vis
+    mov edi, 0xB8000 + (9 * 160) + (24 * 2)
+    mov ah, 0x07
+    call print_string
+    mov esi, s3_role
+    mov edi, 0xB8000 + (9 * 160) + (29 * 2)
     mov ah, 0x07
     call print_string
 
@@ -299,15 +325,19 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s4_code
-    mov edi, 0xB8000 + (10 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (10 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s4_hw
-    mov edi, 0xB8000 + (10 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (10 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s4_vis
-    mov edi, 0xB8000 + (10 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (10 * 160) + (24 * 2)
+    mov ah, 0x07
+    call print_string
+    mov esi, s4_role
+    mov edi, 0xB8000 + (10 * 160) + (29 * 2)
     mov ah, 0x07
     call print_string
 
@@ -316,15 +346,19 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s5_code
-    mov edi, 0xB8000 + (11 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (11 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s5_hw
-    mov edi, 0xB8000 + (11 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (11 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s5_vis
-    mov edi, 0xB8000 + (11 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (11 * 160) + (24 * 2)
+    mov ah, 0x07
+    call print_string
+    mov esi, s5_role
+    mov edi, 0xB8000 + (11 * 160) + (29 * 2)
     mov ah, 0x07
     call print_string
 
@@ -333,15 +367,19 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s6_code
-    mov edi, 0xB8000 + (12 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (12 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s6_hw
-    mov edi, 0xB8000 + (12 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (12 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s6_vis
-    mov edi, 0xB8000 + (12 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (12 * 160) + (24 * 2)
+    mov ah, 0x07
+    call print_string
+    mov esi, s6_role
+    mov edi, 0xB8000 + (12 * 160) + (29 * 2)
     mov ah, 0x07
     call print_string
 
@@ -350,16 +388,33 @@ render_stage_metadata:
     mov ah, 0x0F
     call print_string
     mov esi, s7_code
-    mov edi, 0xB8000 + (13 * 160) + (10 * 2)
+    mov edi, 0xB8000 + (13 * 160) + (8 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s7_hw
-    mov edi, 0xB8000 + (13 * 160) + (26 * 2)
+    mov edi, 0xB8000 + (13 * 160) + (16 * 2)
     mov ah, 0x07
     call print_string
     mov esi, s7_vis
-    mov edi, 0xB8000 + (13 * 160) + (37 * 2)
+    mov edi, 0xB8000 + (13 * 160) + (24 * 2)
     mov ah, 0x07
+    call print_string
+    mov esi, s7_role
+    mov edi, 0xB8000 + (13 * 160) + (29 * 2)
+    mov ah, 0x07
+    call print_string
+
+    mov esi, legend1
+    mov edi, 0xB8000 + (17 * 160) + (0 * 2)
+    mov ah, 0x08
+    call print_string
+    mov esi, legend2
+    mov edi, 0xB8000 + (18 * 160) + (0 * 2)
+    mov ah, 0x08
+    call print_string
+    mov esi, legend3
+    mov edi, 0xB8000 + (19 * 160) + (0 * 2)
+    mov ah, 0x08
     call print_string
     ret
 
@@ -429,7 +484,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (7 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (7 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
 
@@ -440,7 +495,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (8 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (8 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
 
@@ -451,7 +506,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (9 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (9 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
 
@@ -462,7 +517,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (10 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (10 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
 
@@ -473,7 +528,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (11 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (11 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
 
@@ -484,7 +539,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (12 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (12 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
 
@@ -495,7 +550,7 @@ render_cycle_numbers:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (13 * 160) + (42 * 2)
+    mov edi, 0xB8000 + (13 * 160) + (38 * 2)
     mov ah, 0x0F
     call print_string
     ret
@@ -513,7 +568,7 @@ render_total:
     mov edi, hex_buffer + 8
     call u32_to_hex
     mov esi, hex_buffer
-    mov edi, 0xB8000 + (15 * 160) + (13 * 2)
+    mov edi, 0xB8000 + (15 * 160) + (8 * 2)
     mov ah, 0x0F
     call print_string
     ret
